@@ -1,0 +1,32 @@
+html, body{
+	width : 100%;
+	height : 100%;
+	font-family: sans-serif;
+	color :#ecf0f1;
+	font-family: "Lora";
+	font-size: 20px;
+	background: #fff;
+	padding :0;
+	overflow: hidden;
+}
+#container {
+	position: absolute;
+	top :0;
+	left :0;
+	margin : 0;
+	padding:0;
+	background: #001326;
+	display : block;
+	z-index: 0;
+	
+}
+#newCorps {
+	z-index: 999;
+
+
+}
+span {
+	position: absolute;
+	right : 20px;
+	bottom : 20px;
+}
