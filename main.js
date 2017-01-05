@@ -304,6 +304,8 @@ var Ncorps = {
 				Ncorps.bodies[end].vy = 0;
 				console.log(Ncorps.bodies);
 				Ncorps.createTree();
+				Ncorps.getForces();
+				Ncorps.draw();
 
 				Ncorps.addBodyClickInit();
 
