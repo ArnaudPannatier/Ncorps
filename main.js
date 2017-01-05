@@ -139,6 +139,8 @@ var Ncorps = {
 
 		Ncorps.supprime(c);
 		Ncorps.supprime(b);
+		Ncorps.N = Ncorps.bodies.length;
+		$('#N').text(Ncorps.N);
 		console.log(Ncorps.bodies.length);
 
 	},
@@ -335,6 +337,8 @@ var Ncorps = {
 				Ncorps.getForces();
 				Ncorps.draw();
 
+				Ncorps.N = Ncorps.bodies.length;
+				$('#N').text(Ncorps.N);
 				Ncorps.addBodyClickInit();
 
 
@@ -351,6 +355,7 @@ var Ncorps = {
 			Ncorps.Ly = Ncorps.container.height;
 			Ncorps.ratio = Ncorps.Lx/Ncorps.Ly;
 
+
 			if(Ncorps.container.getContext){ 
 
 				Ncorps.ctx = Ncorps.container.getContext('2d'); 
@@ -363,6 +368,9 @@ var Ncorps = {
 				Ncorps.draw();
 				setInterval(Ncorps.evolue, Ncorps.t);
 			}
+
+			$('#N').text(Ncorps.N);
+
 			$(window).resize(function(){
 				Ncorps.container.width = window.innerWidth;
 				Ncorps.container.height = window.innerHeight;
