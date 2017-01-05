@@ -14,6 +14,7 @@ var Ncorps = {
 	bodies : new Array(),
 	stop : false,
 	closeEncounter : 0.0001,
+	depth : 30,
 	frottement : 0.01,
 	ombre : 20,
 	miseazero : function(){
@@ -37,36 +38,43 @@ var Ncorps = {
 	createTree : function(){
 		Ncorps.Tree = new Node({x: 0,y:0}, {x : 1, y: 1/Ncorps.ratio});
 		Ncorps.bodies.forEach(function(b){
-			Ncorps.placeBody(Ncorps.Tree, b);
+			Ncorps.placeBody(Ncorps.Tree, b,1);
 		});
 	},
-	placeBody : function(cur, b){
+	placeBody : function(cur, b, depth){
 		if(Ncorps.isinRect(b)){
-
+			
 			cur.cm.x = (cur.cm.x*cur.totalMass+b.masse*b.x)/(b.masse+cur.totalMass);	
 			cur.cm.y = (cur.cm.y*cur.totalMass+b.masse*b.y)/(b.masse+cur.totalMass);		
 			cur.totalMass += b.masse;
 
 			if(cur.hasChildren){
-				Ncorps.placeBody(Ncorps.findQuadrant(cur,b), b);
+				if(depth <= Ncorps.depth){
+					Ncorps.placeBody(Ncorps.findQuadrant(cur,b), b, depth+1);
+				}else{
+					Ncorps.fusionne(cur, b);
+				}
 			}else{
 				if(cur.isEmpty){
 
 					cur.body = b;
 					cur.isEmpty = false;
 				}else{
-					Ncorps.makeChilrenAndPlace(cur,b);
+					Ncorps.makeChilrenAndPlace(cur,b,depth);
 
 				}
 			}
+
 		}else{
-/*			var ind = Ncorps.bodies.indexOf(b);
-			if(ind > -1){
-				Ncorps.bodies.splice(ind,1);
-			}*/
-			//Ncorps.shiftToRect(b);
+
 			Ncorps.rebondit(b);
 
+		}
+	},
+	supprime : function(b){
+		var ind = Ncorps.bodies.indexOf(b);
+		if(ind > -1){
+			Ncorps.bodies.splice(ind,1);
 		}
 	},
 	rebondit : function(b){
@@ -98,7 +106,7 @@ var Ncorps = {
 	isinRect : function(b){
 		return (b.x>=0 &&b.x <=1) && (b.y>=0 &&b.y <=1/Ncorps.ratio);
 	},
-	makeChilrenAndPlace : function(cur,b){
+	makeChilrenAndPlace : function(cur,b,depth){
 		cur.hasChildren = true;
 		c = cur.body;
 		midx = (cur.stpt.x + cur.endpt.x)/2;
@@ -109,8 +117,30 @@ var Ncorps = {
 		cur.ne = new Node({x: midx, y : cur.stpt.y},{x:cur.endpt.x, y:midy});
 		cur.se = new Node({x:midx, y: midy}, cur.endpt);
 
-		Ncorps.placeBody(cur,b);
-		Ncorps.placeBody(cur,c);
+		Ncorps.placeBody(cur,b,depth+1);
+		Ncorps.placeBody(cur,c, depth +1);
+	},
+	fusionne : function(cur,b){
+		c = cur.body;
+
+		var end = Ncorps.bodies.length;
+		Ncorps.bodies[end] = {};
+		Ncorps.bodies[end].masse =( c.masse + b.masse > Ncorps.maxM*2) ? Ncorps.maxM*2 : c.masse + b.masse ;
+		Ncorps.bodies[end].x = (c.x*c.masse+b.masse*b.x)/(b.masse+c.masse);
+		Ncorps.bodies[end].y = (c.y*c.masse+b.masse*b.y)/(b.masse+c.masse);
+		Ncorps.bodies[end].radius = Ncorps.gamma*Math.pow(Ncorps.bodies[end].masse, 1/Ncorps.xsi);
+		Ncorps.bodies[end].force = {x:0,y:0};
+		
+
+		//conservation of momentum
+		Ncorps.bodies[end].vx = (b.vx*b.masse+c.vx*c.masse)/(c.masse+b.masse);
+		Ncorps.bodies[end].vy = (b.vy*b.masse+c.vy*c.masse)/(c.masse+b.masse);
+		cur.body = Ncorps.bodies[end];
+
+		Ncorps.supprime(c);
+		Ncorps.supprime(b);
+		console.log(Ncorps.bodies.length);
+
 	},
 	findQuadrant : function(cur,b){
 		relx = b.x-cur.stpt.x;
@@ -190,7 +220,7 @@ var Ncorps = {
 
 		c.shadowBlur = 10;
 		c.shadowColor = "white";
-	
+
 		Ncorps.bodies.forEach(function(b){
 
 			c.shadowBlur = Ncorps.ombre;
@@ -293,7 +323,6 @@ var Ncorps = {
 			$(window).click(function(e){
 
 				var end = Ncorps.bodies.length;
-				console.log(end);
 				Ncorps.bodies[end] = {};
 				Ncorps.bodies[end].masse = Ncorps.randomMasse;
 				Ncorps.bodies[end].x = e.clientX/Ncorps.Lx;
@@ -302,7 +331,6 @@ var Ncorps = {
 				Ncorps.bodies[end].force = {x:0,y:0};
 				Ncorps.bodies[end].vx = 0;
 				Ncorps.bodies[end].vy = 0;
-				console.log(Ncorps.bodies);
 				Ncorps.createTree();
 				Ncorps.getForces();
 				Ncorps.draw();
