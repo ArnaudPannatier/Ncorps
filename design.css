@@ -21,11 +21,17 @@ html, body{
 	
 }
 #newCorps {
-	z-index: 999;
+	z-index: 900;
 	position: absolute;
 	top : 0;
 	left :0;
 
+}
+#Stat {
+	z-index: 999;
+	position: absolute;
+	top : 0;
+	left :0;
 }
 span {
 	position: absolute;

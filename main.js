@@ -1,6 +1,6 @@
 var c;
 var Ncorps = {
-	N : 100,
+	N : 50,
 	treshold : 0.5,
 	minM : 20000,
 	maxM : 100000,
@@ -8,14 +8,15 @@ var Ncorps = {
 	gamma : 1,
 	xsi : 0.58,
 	G :1e-5,
-	dt : 0.0005,
+	dt : 0.001,
 	t : 20,
-	relativeTaille : 70,
+	time : 0,
+	relativeTaille : 30,
 	bodies : new Array(),
 	stop : false,
 	closeEncounter : 0.0001,
 	depth : 30,
-	frottement : 0.01,
+	frottement : 0.03,
 	ombre : 20,
 	miseazero : function(){
 		Ncorps.createRandom(Ncorps.N);
@@ -67,7 +68,7 @@ var Ncorps = {
 
 		}else{
 
-			Ncorps.rebondit(b);
+			Ncorps.shiftToRect(b);
 
 		}
 	},
@@ -141,7 +142,6 @@ var Ncorps = {
 		Ncorps.supprime(b);
 		Ncorps.N = Ncorps.bodies.length;
 		$('#N').text(Ncorps.N);
-		console.log(Ncorps.bodies.length);
 
 	},
 	findQuadrant : function(cur,b){
@@ -212,11 +212,31 @@ var Ncorps = {
 			b.force = {x:0,y:0};		
 			Ncorps.exploreTreeAddForce(Ncorps.Tree,b);
 			if(Ncorps.normaliseAffichage(b) > Ncorps.maxForce)	
-				Ncorps.maxForce = Ncorps.normaliseAffichage(b) ;
+				Ncorps.maxForce = Ncorps.normaliseAffichage(b);
 			
 		});
 	},
+	getEcin : function(){
+		var Ecin = 0;
+		Ncorps.bodies.forEach(function(b){	
+			Ecin += 0.5*b.masse*(b.vx*b.vx+b.vy*b.vy);
+		});
+		return Ecin;
+
+	},
+	getEpot : function(){
+		var Epot = 0;
+		Ncorps.bodies.forEach(function(b){
+			Epot -= 0.5*(b.x*b.force.x+b.y*b.force.y); 
+		});
+		return Epot;
+
+
+	},
+
+
 	draw : function(){
+			
 		c = Ncorps.ctx;
 		c.clearRect(0, 0, Ncorps.container.width, Ncorps.container.height);
 
@@ -259,12 +279,17 @@ var Ncorps = {
 			c.fillStyle ="#000";
 			c.fill();
 
-
+		
+			Stat.draw();
 
 
 		},
+
+
+
 		evolue : function(){
 			if(!Ncorps.stop){
+				Ncorps.time += Ncorps.t; 
 				Ncorps.bodies.forEach(function(b){
 					b.x = b.x + b.vx*Ncorps.dt;
 					b.y = b.y + b.vy*Ncorps.dt;
@@ -405,6 +430,7 @@ var Ncorps = {
 		this.hasChildren = false
 	};
 	function drawArrow(c,x1,y1,alpha,norm){
+		//cap 
 		x2 = x1+norm*Math.cos(alpha);
 		y2 = y1+norm*Math.sin(alpha);
 		vec = {x: x2-x1, y :y2-y1};
@@ -414,18 +440,211 @@ var Ncorps = {
 		vecn = {x: y2-y1, y :x2-x1};
 		vecn.x /= Math.sqrt(vecn.x*vecn.x+vecn.y*vecn.y); 
 		vecn.y /= Math.sqrt(vecn.x*vecn.x+vecn.y*vecn.y); 
+		
+    var head= 10;   // length of head in pixels
+    c.beginPath();
+    c.moveTo(x1,y1);
+    c.lineTo(x2,y2);
+    c.lineTo(x2-head*Math.cos(alpha-Math.PI/6),y2-head*Math.sin(alpha-Math.PI/6));
+    c.lineTo(x2-head*Math.cos(alpha+Math.PI/6),y2-head*Math.sin(alpha+Math.PI/6));
+
+    c.lineTo(x2,y2);
+
+    c.fill();
+    c.stroke();
+
+
+};
+var Stat = {
+	tour : 5000,
+	series : {Ecin : [], Epot : []},
+	offset : 0.1,
+
+	draw : function(){
+
+		Stat.container = document.getElementById('Stat');
+		var w = window.innerWidth/2;
+		var h = window.innerHeight; 
+
+		Stat.series.Ecin.push(Ncorps.getEcin());
+		Stat.series.Epot.push(Ncorps.getEpot());
+
+
+		Stat.container.width = w;
+		Stat.container.height = h;
+		if(Stat.container.getContext){
+			Stat.ctxStat = Stat.container.getContext('2d');
+			cS = Stat.ctxStat;
+			cS.globalAlpha = 0.5;
+			
+			cS.lineWidth = 3;
+			cS.lineJoin='round';
+			cS.shadowBlur=5;
+			
+			cS.clearRect(0,0,w,h);
+			
+			//Ecin
+			cS.shadowColor="#f00"; 
+			cS.strokeStyle= "#f00";
+			cS.beginPath();
+			
+			var points = Stat.dataEcinToPoints(w,h);
+			cS.moveTo(points[0].x , points[0].y);
+			points.forEach(function(p){
+				cS.lineTo(p.x, p.y);	
+			});
+			
+			cS.stroke();
+			cS.font="20px Arial";
+			cS.fillStyle = "#f00";
+			Stat.textLine(cS,"Ecin", points[points.length-1].y, w, true);
+			
+			//Epot
+			cS.shadowColor="#ff0"; 
+			cS.strokeStyle= "#ff0";
+			cS.beginPath();
+			
+			var points = Stat.dataEpotToPoints(w,h);
+			cS.moveTo(points[0].x , points[0].y);
+			points.forEach(function(p){
+				cS.lineTo(p.x, p.y);	
+			});
+			
+			cS.stroke();
+			cS.font="20px Arial";
+			cS.fillStyle = "#ff0";
+			Stat.textLine(cS,"Epot", points[points.length-1].y, w, true);
+			
+
+
+			Stat.drawMin(cS,h,w);
+
+
+
+			//console.log(Ncorps.getEcin());
+
+			
+		}
+	},
+	textLine : function(c,str,h,w, center=false){
+		
+		c.setLineDash([5, 4]);
+		if(center){
+			c.fillText(str, 0, h+5);
+
+		}else{
+		c.fillText(str, 0, h-5);
+		}
+		var width = c.measureText(str).width;
 		c.beginPath();
-		c.moveTo(x1,y1);
-		c.lineTo(x2,y2);
-	//c.lineTo(x2-10*vec.x, y2-10*vec.y);
-	//c.lineTo(x2-10*vec.x+5*vecn.x,y2-10*vec.y+5*vecn.y);
-	//c.lineTo(x2-10*vec.x-5*vecn.x,y2-10*vec.y-5*vecn.y);
+		c.moveTo(width+4, h);
+		c.lineTo(w, h);
 	
-	c.lineTo(x2,y2);
-	c.stroke();
-	c.fill();
+
+		c.stroke();
+
+	},
+	drawMin(c,h,w){
+		
+		c.font="20px Arial";
+		c.lineWidth = 1;
+		c.lineJoin='round';
+		c.fillStyle = "#fff";
+		c.shadowBlur=0;
+		c.shadowColor="#fff"; 
+		c.strokeStyle= "#fff";
+
+		var textMin = Stat.format(Stat.min);
+		var hmin = h*(1-Stat.offset);
+		var hmax = h*Stat.offset;
+		Stat.textLine(c, Stat.format(Stat.min), hmin,w);
+		Stat.textLine(c, Stat.format(Stat.max), hmax,w);
 
 
+	},
+	format : function(i){
+		var txt = Math.floor(i*100)/100;
+		txt += " [J]";
+		return txt;
+	},
+	TimeToX : function(t,w){
+		return (w == 0)? 0 : (t%Stat.tour)*w/Stat.tour;
+	},
+	IndexToX : function(dt,i,w,l){
+		var x = 0;
+		if(dt*l < Stat.tour){
+			x = dt*i/Stat.tour;
+
+		}else{
+			x = (dt*i)/(dt*l);
+
+		}
+
+		return (w == 0)? 0 : x*w;
+	},
+	maxSeries : function(){
+		max = [];
+		for (var s in Stat.series){
+			
+			max.push(Math.max(...Stat.series[s]));
+		}
+
+		return Math.max(...max);
+	},
+	minSeries : function(){
+		min = [];
+		for (var s in Stat.series){
+			min.push(Math.min(...Stat.series[s]));
+		}
+		return Math.min(...min);
+
+
+	},
+	dataEcinToPoints : function(w,h){
+		var ret = [];
+		Stat.max = Stat.maxSeries();
+		Stat.min = Stat.minSeries();
+		Stat.max -= Stat.min;
+	
+
+		Stat.series.Ecin.forEach(function(s){
+			// on place les données entre 0 et 1 
+			var norm = (s-Stat.min)/Stat.max;
+			// gérer l'affichage 
+			var display = h-2*h*Stat.offset;
+			var hauteur = h*Stat.offset+display*(1-norm);  
+
+			ret.push({x: Stat.IndexToX(Ncorps.t, ret.length+1, w, Stat.series.Ecin.length), y: hauteur});
+
+
+		});
+
+		return ret;
+
+
+	},
+	dataEpotToPoints : function(w,h){
+		var ret = [];
+		Stat.max = Stat.maxSeries();
+		Stat.min = Stat.minSeries();
+		Stat.max -= Stat.min;
+
+
+		Stat.series.Epot.forEach(function(s){
+			// on place les données entre 0 et 1 
+			var norm = (s-Stat.min)/Stat.max;
+			// gérer l'affichage 
+			var display = h-2*h*Stat.offset;
+			var hauteur = h*Stat.offset+display*(1-norm);  
+
+			ret.push({x: Stat.IndexToX(Ncorps.t, ret.length+1, w, Stat.series.Epot.length), y: hauteur});
+
+		});
+
+		return ret;
+
+
+	},
 }
 
 
