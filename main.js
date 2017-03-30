@@ -407,8 +407,10 @@ var Ncorps = {
 					Ncorps.draw();
 				}
 			});
-			$(window).keypress(function(e){
-				if(e.keyCode == 32){
+			$(window).keypress(function(evt){
+				var e = evt || event;
+    			var code = e.keyCode || e.which;
+				if(code == 32){
 					Ncorps.stop = (Ncorps.stop)? false : true;
 				}
 			});
